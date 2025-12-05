@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>DaBoyzz Chat 🔥</title>
+
+  <style>
+    body {
+      margin: 0;
+      background: #101010;
+      color: #f1f1f1;
+      font-family: Arial, sans-serif;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ff4040;
+      margin-top: 25px;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+
+    /* Login box */
+    #loginScreen {
+      padding: 20px;
+      display: block;
+    }
+
+    #loginBox {
+      max-width: 360px;
+      margin: 60px auto;
+      background: #1b1b1b;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 0 20px #000;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      background: #262626;
+      color: #fff;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #ff4040;
+      border: none;
+      border-radius: 6px;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #ff2222;
+    }
+
+    /* Chat screen */
+    #chatScreen {
+      padding: 20px;
+      display: none;
+    }
+
+    #chatBox {
+      margin-top: 15px;
+      height: 420px;
+      background: #191919;
+      border: 2px solid #333;
+      overflow-y: auto;
+      padding: 12px;
+      border-radius: 10px;
+    }
+
+    .msg {
+      padding: 6px 0;
+      border-bottom: 1px solid #2a2a2a;
+    }
+
+    .user {
+      font-weight: bold;
+      color: #ff7777;
+    }
+
+    #msgInput {
+      width: 75%;
+      padding: 10px;
+      border-radius: 6px;
+      border: none;
+      background: #262626;
+      color: #fff;
+    }
+
+    #sendBtn {
+      padding: 10px 20px;
+      background: #ff4040;
+      border-radius: 6px;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      margin-left: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen">
+  <h1>DaBoyzz Chat 🔥</h1>
+
+  <div id="loginBox">
+    <h3>Login With Username</h3>
+
+    <input id="userInput" placeholder="Username">
+    <input id="passInput" type="password" placeholder="Password">
+
+    <button onclick="usernameLogin()">Login / Register</button>
+
+    <br><br>
+
+    <h3>Or Continue as Guest</h3>
+    <button onclick="guestLogin()">Guest Mode</button>
+  </div>
+</div>
+
+<!-- CHAT SCREEN -->
+<div id="chatScreen">
+  <h1>DaBoyzz Chat 🔥</h1>
+
+  <div id="chatBox"></div>
+
+  <br>
+
+  <input id="msgInput" placeholder="Type message...">
+  <button id="sendBtn" onclick="sendMessage()">Send</button>
+</div>
+
+<!-- PocketBase SDK -->
+<script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+
+<script>
+  // 🔥 CHANGE THIS TO YOUR POCKETBASE BACKEND URL
+  const pb = new PocketBase("https://YOUR-BACKEND-URL.onrender.com");
+
+  let username = null;
+  const LS_USER = "daboyzz_user";
+
+  // ⭐ ENTER CHAT SCREEN
+  function enterChat(name) {
+    username = name;
+    localStorage.setItem(LS_USER, name);
+
+    document.getElementById("loginScreen").style.display = "none";
+    document.getElementById("chatScreen").style.display = "block";
+
+    loadMessages();
+    pb.collection("messages").subscribe("*", () => loadMessages());
+  }
+
+  // ⭐ USER LOGIN / REGISTER
+  async function usernameLogin() {
+    const user = document.getElementById("userInput").value.trim();
+    const pass = document.getElementById("passInput").value.trim();
+
+    if (!user || !pass) {
+      alert("Enter username and password.");
+      return;
+    }
+
+    try {
+      await pb.collection("daboyzz_users").authWithPassword(user, pass);
+      enterChat(user);
+    } catch {
+      await pb.collection("daboyzz_users").create({
+        username: user,
+        password: pass,
+        passwordConfirm: pass
+      });
+
+      await pb.collection("daboyzz_users").authWithPassword(user, pass);
+      enterChat(user);
+    }
+  }
+
+  // ⭐ GUEST LOGIN
+  function guestLogin() {
+    let n = "Guest" + Math.floor(Math.random() * 9000);
+    enterChat(n);
+  }
+
+  // ⭐ LOAD CHAT MESSAGES
+  async function loadMessages() {
+    const msgs = await pb.collection("messages").getFullList({ sort: "created" });
+
+    document.getElementById("chatBox").innerHTML = msgs.map(m => `
+      <div class="msg">
+        <span class="user">${m.user}:</span>
+        <span class="text">${m.text}</span>
+      </div>
+    `).join("");
+
+    let box = document.getElementById("chatBox");
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // ⭐ SEND MESSAGE
+  async function sendMessage() {
+    const text = document.getElementById("msgInput").value.trim();
+    if (!text) return;
+
+    await pb.collection("messages").create({
+      text: text,
+      user: username
+    });
+
+    document.getElementById("msgInput").value = "";
+  }
+</script>
+
+</body>
+</html>
